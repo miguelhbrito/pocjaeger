@@ -1,71 +1,26 @@
 package midtracing
 
 import (
-	"context"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+	"github.com/pocjaeger/tracing"
+	"github.com/uber/jaeger-client-go"
 	"net/http"
-	"runtime/debug"
-	"time"
-
-	log "github.com/go-kit/kit/log"
 )
 
-// responseWriter is a minimal wrapper for http.ResponseWriter that allows the
-// written HTTP status code to be captured for logging.
-type responseWriter struct {
-	http.ResponseWriter
-	status      int
-	wroteHeader bool
-}
+func TracingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		tracer, closer := tracing.InitJaeger("server-tracing")
+		defer closer.Close()
+		spanCtx, _ := tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
+		span := tracer.StartSpan("server-midtracing", ext.RPCServerOption(spanCtx))
+		defer span.Finish()
 
-func wrapResponseWriter(w http.ResponseWriter) *responseWriter {
-	return &responseWriter{ResponseWriter: w}
-}
-
-func (rw *responseWriter) Status() int {
-	return rw.status
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	if rw.wroteHeader {
-		return
-	}
-
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
-	rw.wroteHeader = true
-
-	return
-}
-
-func TracingMiddleware(ctx context.Context)  {
-	//TODO
-}
-
-// LoggingMiddleware logs the incoming HTTP request & its duration.
-func LoggingMiddleware(logger log.Logger) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				if err := recover(); err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					logger.Log(
-						"err", err,
-						"trace", debug.Stack(),
-					)
-				}
-			}()
-
-			start := time.Now()
-			wrapped := wrapResponseWriter(w)
-			next.ServeHTTP(wrapped, r)
-			logger.Log(
-				"status", wrapped.status,
-				"method", r.Method,
-				"path", r.URL.EscapedPath(),
-				"duration", time.Since(start),
-			)
+		if sc, ok := span.Context().(jaeger.SpanContext); ok {
+			span.SetTag("spanID", sc.SpanID())
+			span.SetTag("traceID", sc.TraceID())
 		}
 
-		return http.HandlerFunc(fn)
-	}
+		next.ServeHTTP(w, r)
+	})
 }

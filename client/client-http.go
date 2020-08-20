@@ -5,18 +5,21 @@ import (
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/uber/jaeger-client-go"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 )
 
-func Do(ctx context.Context, data string) ([]byte, error) {
-	span, _ := opentracing.StartSpanFromContext(ctx, "midtracing")
+func DoRequest(ctx context.Context, data string) ([]byte, error) {
+	span, _ := opentracing.StartSpanFromContext(ctx, "doing-request")
+	span.SetTag("spanID", span.Context().(jaeger.SpanContext).SpanID())
+	span.SetTag("traceID", span.Context().(jaeger.SpanContext).TraceID())
 	defer span.Finish()
 
 	v := url.Values{}
-	v.Set("helloStr", data)
-	url := "http://localhost:8000/tracing?" + v.Encode()
+	v.Set("hello-world", data)
+	url := "http://localhost:8000/helloWorld?" + v.Encode()
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(err.Error())

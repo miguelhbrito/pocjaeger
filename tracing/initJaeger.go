@@ -8,7 +8,6 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go/config"
 	jaegerlog "github.com/uber/jaeger-client-go/log"
-	"github.com/uber/jaeger-lib/metrics"
 )
 
 func InitJaeger(service string) (opentracing.Tracer, io.Closer) {
@@ -26,9 +25,8 @@ func InitJaeger(service string) (opentracing.Tracer, io.Closer) {
 	}
 
 	jLogger := jaegerlog.StdLogger
-	jMetricsFactory := metrics.NullFactory
 
-	tracer, closer, err := cfg.NewTracer(config.Logger(jLogger), config.Metrics(jMetricsFactory))
+	tracer, closer, err := cfg.NewTracer(config.Logger(jLogger))
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
 	}
