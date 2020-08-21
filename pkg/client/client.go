@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -8,23 +8,26 @@ import (
 	"github.com/uber/jaeger-client-go"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 )
 
-func DoRequest(ctx context.Context, data string) ([]byte, error) {
+func DoRequest(ctx context.Context) ([]byte, error) {
 	span, _ := opentracing.StartSpanFromContext(ctx, "doing-request")
-	span.SetTag("spanID", span.Context().(jaeger.SpanContext).SpanID())
-	span.SetTag("traceID", span.Context().(jaeger.SpanContext).TraceID())
 	defer span.Finish()
 
-	v := url.Values{}
-	v.Set("hello-world", data)
-	url := "http://localhost:8000/helloWorld?" + v.Encode()
+	sid := span.Context().(jaeger.SpanContext).SpanID()
+	tid := span.Context().(jaeger.SpanContext).TraceID()
+	span.SetTag("spanID", sid)
+	span.SetTag("traceID", tid)
+
+	tids := fmt.Sprintf("%s", tid)
+
+	url := "http://localhost:8080/server-two"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		panic(err.Error())
 	}
 
+	req.Header.Set("TraceID", tids)
 	ext.SpanKindRPCClient.Set(span)
 	ext.HTTPUrl.Set(span, url)
 	ext.HTTPMethod.Set(span, "GET")

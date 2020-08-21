@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"fmt"
+	"github.com/uber/jaeger-client-go/zipkin"
 	"io"
 	"time"
 
@@ -10,7 +11,8 @@ import (
 	jaegerlog "github.com/uber/jaeger-client-go/log"
 )
 
-func InitJaeger(service string) (opentracing.Tracer, io.Closer) {
+func InitJaeger(service string) io.Closer {
+	zipkinPropagator := zipkin.NewZipkinB3HTTPHeaderPropagator()
 	cfg := config.Configuration{
 		ServiceName: service,
 		Sampler: &config.SamplerConfig{
@@ -26,12 +28,16 @@ func InitJaeger(service string) (opentracing.Tracer, io.Closer) {
 
 	jLogger := jaegerlog.StdLogger
 
-	tracer, closer, err := cfg.NewTracer(config.Logger(jLogger))
+	tracer, closer, err := cfg.NewTracer(
+		config.Logger(jLogger),
+		config.ZipkinSharedRPCSpan(true),
+		config.Injector(opentracing.HTTPHeaders, zipkinPropagator),
+		config.Extractor(opentracing.HTTPHeaders, zipkinPropagator))
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
 	}
+
 	opentracing.SetGlobalTracer(tracer)
 
-	return tracer, closer
+	return closer
 }
-
