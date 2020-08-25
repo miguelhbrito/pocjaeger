@@ -16,13 +16,15 @@ func InitJaeger(service string) io.Closer {
 	cfg := config.Configuration{
 		ServiceName: service,
 		Sampler: &config.SamplerConfig{
+			//already in default
+			SamplingServerURL: "http://localhost:5778/sampling",
 			Type:  "const",
-			Param: 1,
+			Param: 1.0,
 		},
 		Reporter: &config.ReporterConfig{
 			LogSpans:            true,
 			BufferFlushInterval: 1 * time.Millisecond,
-			LocalAgentHostPort:  "127.0.0.1:5775",
+			LocalAgentHostPort:  "127.0.0.1:6831",
 		},
 	}
 
@@ -30,7 +32,7 @@ func InitJaeger(service string) io.Closer {
 
 	tracer, closer, err := cfg.NewTracer(
 		config.Logger(jLogger),
-		//config.ZipkinSharedRPCSpan(true),
+		config.ZipkinSharedRPCSpan(true),
 		config.Injector(opentracing.HTTPHeaders, zipkinPropagator),
 		config.Extractor(opentracing.HTTPHeaders, zipkinPropagator))
 	if err != nil {
