@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	otlog "github.com/opentracing/opentracing-go/log"
@@ -12,22 +12,37 @@ import (
 	"os"
 )
 
-func myTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request) {
+func myTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request){
 	spanCtx, _ := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
 	span := opentracing.GlobalTracer().StartSpan("server-two-operation", ext.RPCServerOption(spanCtx))
 	defer span.Finish()
 
-	tid := span.Context().(jaeger.SpanContext).TraceID()
-	tids := fmt.Sprintf("%s", tid)
+	var tid, sid string
+	if sc, ok := span.Context().(jaeger.SpanContext); ok {
+		tid = sc.TraceID().String()
+		sid = sc.SpanID().String()
+	}
 
-	log.Println("TraceID to see the tracing of this request: ", tids)
+	log.Println("TraceID to see the tracing of this request: ", tid)
 
 	span.LogFields(
 		otlog.String("event", "event-from-client"),
-		otlog.String("traceID", tids),
+		otlog.String("traceID", tid),
+		otlog.Int("request status", http.StatusOK),
 	)
 
-	w.Header().Set("traceID", tids)
+	w.WriteHeader(200)
+
+	w.Header().Set("traceID", tid)
+	w.Header().Set("spanID", sid)
+
+	_ = json.NewEncoder(w).Encode(struct {
+		TraceID string `json:"trace-id"`
+		SpanID  string `json:"span-id"`
+	}{
+		TraceID: tid,
+		SpanID:  sid,
+	})
 }
 
 func main() {
@@ -37,6 +52,7 @@ func main() {
 	//TODO maybe change this to use midtracing
 	http.Handle("/server-two", http.HandlerFunc(myTracingHandlerServerTwo))
 
+	log.Println("Server two listening on 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		os.Exit(1)
 	}

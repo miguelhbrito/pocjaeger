@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -10,7 +11,12 @@ import (
 	"net/http"
 )
 
-func DoRequest(ctx context.Context) ([]byte, error) {
+type Response struct {
+	TraceID string `json:"trace-id"`
+	SpanID  string `json:"span-id"`
+}
+
+func DoRequest(ctx context.Context) (Response, error) {
 	span, _ := opentracing.StartSpanFromContext(ctx, "doing-request")
 	defer span.Finish()
 
@@ -39,18 +45,19 @@ func DoRequest(ctx context.Context) ([]byte, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
-
+	var responseBody Response
 	body, err := ioutil.ReadAll(resp.Body)
+	_ = json.Unmarshal(body, &responseBody)
 	if err != nil {
-		return nil, err
+		return Response{}, err
 	}
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("StatusCode: %d, Body: %s", resp.StatusCode, body)
+		return Response{}, fmt.Errorf("StatusCode: %d, Body: %s", resp.StatusCode, body)
 	}
 
-	return body, nil
+	return responseBody, nil
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pocjaeger/pkg/client"
@@ -18,19 +18,23 @@ func myTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
 	defer span.Finish()
 
-	_, err := client.DoRequest(ctx)
+	body, err := client.DoRequest(ctx)
 	if err != nil {
 		ext.LogError(span, err)
 		panic(err.Error())
 	}
 
-	tid := span.Context().(jaeger.SpanContext).TraceID()
-	tids := fmt.Sprintf("%s", tid)
+	var tid string
+	if sc, ok := span.Context().(jaeger.SpanContext); ok {
+		tid = sc.TraceID().String()
+	}
 
-	log.Println("TraceID to see the tracing of this request: ", tids)
+	log.Println("TraceID to see the tracing of this request: ", tid)
 
-	w.Header().Set("traceID", tids)
-	w.Write([]byte(tids))
+	bodyString, _ := json.Marshal(body)
+
+	w.Header().Set("traceID", tid)
+	w.Write(bodyString)
 }
 
 func main() {
@@ -40,6 +44,7 @@ func main() {
 	//TODO maybe change this to use midtracing
 	http.Handle("/", http.HandlerFunc(myTracingHandlerServerOne))
 
+	log.Println("Server one listening on 8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		os.Exit(1)
 	}

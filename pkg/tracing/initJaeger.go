@@ -30,7 +30,7 @@ func InitJaeger(service string) io.Closer {
 
 	tracer, closer, err := cfg.NewTracer(
 		config.Logger(jLogger),
-		config.ZipkinSharedRPCSpan(true),
+		//config.ZipkinSharedRPCSpan(true),
 		config.Injector(opentracing.HTTPHeaders, zipkinPropagator),
 		config.Extractor(opentracing.HTTPHeaders, zipkinPropagator))
 	if err != nil {
