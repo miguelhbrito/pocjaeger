@@ -2,39 +2,40 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pocjaeger/pkg/client"
 	"github.com/pocjaeger/pkg/tracing"
-	"github.com/uber/jaeger-client-go"
-	"log"
+	"github.com/rs/zerolog/log"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
 
 func myTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
-	span := opentracing.GlobalTracer().StartSpan("request-to-server-two")
-	ctx := opentracing.ContextWithSpan(context.Background(), span)
-	defer span.Finish()
+	rootSpan := opentracing.GlobalTracer().StartSpan("Request to Server One")
+	ctx := opentracing.ContextWithSpan(context.Background(), rootSpan)
+	defer rootSpan.Finish()
 
-	body, err := client.DoRequest(ctx)
+	response, err := client.DoRequest(ctx)
 	if err != nil {
-		ext.LogError(span, err)
+		ext.LogError(rootSpan, err)
 		panic(err.Error())
 	}
 
-	var tid string
-	if sc, ok := span.Context().(jaeger.SpanContext); ok {
-		tid = sc.TraceID().String()
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		log.Error().Err(err)
 	}
+	defer response.Body.Close()
 
-	log.Println("TraceID to see the tracing of this request: ", tid)
-
-	bodyString, _ := json.Marshal(body)
-
+	tid := tracing.GetTraceID(rootSpan)
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("traceID", tid)
-	w.Write(bodyString)
+	_, err = w.Write(body)
+	if err != nil {
+		log.Error().Err(err)
+	}
 }
 
 func main() {
@@ -44,7 +45,7 @@ func main() {
 	//TODO maybe change this to use midtracing
 	http.Handle("/", http.HandlerFunc(myTracingHandlerServerOne))
 
-	log.Println("Server one listening on 8000")
+	log.Info().Msg("Server one listening on 8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {
 		os.Exit(1)
 	}
