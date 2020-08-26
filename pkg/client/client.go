@@ -4,20 +4,20 @@ import (
 	"context"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/uber/jaeger-client-go"
+	"github.com/pocjaeger/pkg/tracing"
 	"net/http"
 )
 
 type Response struct {
 	TraceID string `json:"trace-id"`
-	SpanID  string `json:"span-id"`
+	SpanID  string `json:"span-id,omitempty"`
 }
 
 func DoRequest(ctx context.Context) (*http.Response, error) {
 	resp := &http.Response{}
 	span, _ := opentracing.StartSpanFromContext(ctx, "Doing request")
 	defer span.Finish()
-	tid := span.Context().(jaeger.SpanContext).TraceID().String()
+	tid := tracing.GetTraceID(span)
 
 	url := "http://localhost:8080/server-two"
 	req, err := http.NewRequest("GET", url, nil)
