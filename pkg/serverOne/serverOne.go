@@ -1,41 +1,38 @@
 package serverOne
 
 import (
-	"context"
 	"github.com/opentracing/opentracing-go"
-	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pocjaeger/pkg/client"
 	"github.com/pocjaeger/pkg/tracing"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
 	"net/http"
 )
 
 func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
-	rootSpan := opentracing.GlobalTracer().StartSpan("Request from Server One")
-	log.Debug().Msgf("Trace ID: %s", tracing.GetSpanID(rootSpan))
-	ctx := opentracing.ContextWithSpan(context.Background(), rootSpan)
-	defer rootSpan.Finish()
+	//rootSpan := opentracing.GlobalTracer().StartSpan("Request on Server One")
+	//ctx := opentracing.ContextWithSpan(context.Background(), rootSpan)
+	//defer rootSpan.Finish()
 
+	ctx := r.Context()
 	response, err := client.DoRequest(ctx)
 	if err != nil {
-		ext.LogError(rootSpan, err)
-		panic(err.Error())
+		log.Error().Err(err).Msg("handle error")
+		return
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
+	//body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
 	defer response.Body.Close()
 
-	tid := tracing.GetTraceID(rootSpan)
+	tid := tracing.GetTraceID(opentracing.SpanFromContext(ctx))
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("traceID", tid)
-	_, err = w.Write(body)
+	_, err = w.Write([]byte("faslkfhskdjhfskjdhfasf"))
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
 }
@@ -54,7 +51,7 @@ func HandlerServerTwoResponse(w http.ResponseWriter, r *http.Request) {
 		span.LogKV("event", "Receiving request from server two")
 		_, err := w.Write([]byte("Success on responding to server one"))
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("handle error")
 		}
 	}
 }

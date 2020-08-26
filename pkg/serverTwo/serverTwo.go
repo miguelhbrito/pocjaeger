@@ -14,7 +14,7 @@ import (
 
 func DoRequest(ctx context.Context, url string) (*http.Response, error) {
 	resp := &http.Response{}
-
+	recover()
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return resp, err
@@ -40,10 +40,10 @@ func DoRequest(ctx context.Context, url string) (*http.Response, error) {
 func MyTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request) {
 	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
-	span := opentracing.GlobalTracer().StartSpan("server-two-operation", opentracing.ChildOf(spanCtx))
+	span := opentracing.GlobalTracer().StartSpan("Request received on server two", opentracing.ChildOf(spanCtx))
 	defer span.Finish()
 
 	tid := tracing.GetTraceID(span)
@@ -62,20 +62,20 @@ func MyTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request) {
 		TraceID: tid,
 	})
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
 
 	ctx := opentracing.ContextWithSpan(context.Background(), span)
 	response, err := DoRequest(ctx, "http://localhost:8000/serverTwoResponse")
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("handle error")
 		return
 	}
 	log.Info().Msg(string(body))

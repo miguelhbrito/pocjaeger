@@ -16,6 +16,6 @@ func main() {
 
 	log.Info().Msg("Server two listening on 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal().Err(err)
+		log.Error().Err(err).Msg("handle error")
 	}
 }
