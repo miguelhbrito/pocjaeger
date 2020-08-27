@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"fmt"
+	"github.com/uber/jaeger-client-go"
 	"github.com/uber/jaeger-client-go/zipkin"
 	"io"
 	"time"
@@ -10,6 +11,20 @@ import (
 	"github.com/uber/jaeger-client-go/config"
 	jaegerlog "github.com/uber/jaeger-client-go/log"
 )
+
+func GetTraceID(span opentracing.Span) string {
+	if sc, ok := span.Context().(jaeger.SpanContext); ok {
+		return sc.TraceID().String()
+	}
+	return ""
+}
+
+func GetSpanID(span opentracing.Span) string {
+	if sc, ok := span.Context().(jaeger.SpanContext); ok {
+		return sc.SpanID().String()
+	}
+	return ""
+}
 
 func InitJaeger(service string) io.Closer {
 	zipkinPropagator := zipkin.NewZipkinB3HTTPHeaderPropagator()
