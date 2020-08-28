@@ -37,7 +37,7 @@ func InitJaeger(service string) io.Closer {
 		Reporter: &config.ReporterConfig{
 			LogSpans:            true,
 			BufferFlushInterval: 1 * time.Millisecond,
-			LocalAgentHostPort:  "127.0.0.1:5775",
+			LocalAgentHostPort:  "127.0.0.1:6831",
 		},
 	}
 
