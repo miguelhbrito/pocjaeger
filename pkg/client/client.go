@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
-	"github.com/pocjaeger/pkg/tracing"
 	"net/http"
 )
 
@@ -15,9 +14,9 @@ type Response struct {
 
 func DoRequest(ctx context.Context) (*http.Response, error) {
 	resp := &http.Response{}
-	span, _ := opentracing.StartSpanFromContext(ctx, "Doing request")
-	defer span.Finish()
-	tid := tracing.GetTraceID(span)
+	//span, _ := opentracing.StartSpanFromContext(ctx, "Doing request")
+	//defer span.Finish()
+	//tid := tracing.GetTraceID(span)
 
 	url := "http://localhost:8080/server-two"
 	req, err := http.NewRequest("GET", url, nil)
@@ -25,7 +24,7 @@ func DoRequest(ctx context.Context) (*http.Response, error) {
 		return resp, err
 	}
 
-	req.Header.Set("trace-id", tid)
+	span := opentracing.SpanFromContext(ctx)
 
 	ext.HTTPUrl.Set(span, url)
 	ext.HTTPMethod.Set(span, "GET")

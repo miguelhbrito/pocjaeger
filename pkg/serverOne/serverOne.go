@@ -17,7 +17,14 @@ func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 	ctx := opentracing.ContextWithSpan(context.Background(), rootSpan)
 	defer rootSpan.Finish()
 
-	response, err := client.DoRequest(ctx)
+	returns := tracing.RunTracedFunction(client.DoRequest, ctx)
+
+	response := returns[0].Interface().(*http.Response)
+	var err error
+	if returns[1].Interface() != nil {
+		err = returns[1].Interface().(error)
+	}
+
 	if err != nil {
 		ext.LogError(rootSpan, err)
 		panic(err.Error())
