@@ -17,13 +17,16 @@ func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 	ctx := opentracing.ContextWithSpan(context.Background(), rootSpan)
 	defer rootSpan.Finish()
 
-	returns := tracing.RunTracedFunction(client.DoRequest, ctx)
+	//returns := tracing.RunTracedFunction(client.DoRequest, ctx)
+	//
+	//response := returns[0].Interface().(*http.Response)
+	//var err error
+	//if returns[1].Interface() != nil {
+	//	err = returns[1].Interface().(error)
+	//}
 
-	response := returns[0].Interface().(*http.Response)
-	var err error
-	if returns[1].Interface() != nil {
-		err = returns[1].Interface().(error)
-	}
+	doRequestTraced := tracing.MakeTracedFunction(client.DoRequest).(func(context.Context) (*http.Response, error))
+	response, err := doRequestTraced(ctx)
 
 	if err != nil {
 		ext.LogError(rootSpan, err)
