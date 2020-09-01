@@ -3,6 +3,7 @@ package serverTwo
 import (
 	"encoding/json"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/pocjaeger/pkg/client"
 	"github.com/pocjaeger/pkg/tracing"
 	"github.com/rs/zerolog/log"
@@ -11,10 +12,6 @@ import (
 
 func MyTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request) {
 	spanCtx, err := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
-	if err != nil {
-		log.Error().Err(err)
-		return
-	}
 	span := opentracing.GlobalTracer().StartSpan("Server two request handler", opentracing.ChildOf(spanCtx))
 	defer span.Finish()
 
@@ -38,6 +35,7 @@ func MyTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Error().Err(err)
+		ext.LogError(span, err)
 		return
 	}
 }

@@ -23,6 +23,7 @@ func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 
 	response, err := client.DoRequest(ctx)
 	if err != nil {
+		log.Error().Err(err)
 		ext.LogError(rootSpan, err)
 		panic(err.Error())
 	}
@@ -30,6 +31,7 @@ func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		log.Error().Err(err)
+		ext.LogError(rootSpan, err)
 		return
 	}
 	defer response.Body.Close()
@@ -44,6 +46,7 @@ func MyTracingHandlerServerOne(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(body)
 	if err != nil {
 		log.Error().Err(err)
+		ext.LogError(rootSpan, err)
 		return
 	}
 }
