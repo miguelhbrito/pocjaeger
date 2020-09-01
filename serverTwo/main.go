@@ -11,7 +11,6 @@ func main() {
 	closer := tracing.InitJaeger("server-two-tracing")
 	defer closer.Close()
 
-	//TODO maybe change this to use midtracing
 	http.Handle("/server-two", http.HandlerFunc(serverTwo.MyTracingHandlerServerTwo))
 
 	log.Info().Msg("Server two listening on 8080")

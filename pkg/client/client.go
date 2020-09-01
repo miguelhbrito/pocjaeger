@@ -15,7 +15,7 @@ type Response struct {
 
 func DoRequest(ctx context.Context) (*http.Response, error) {
 	resp := &http.Response{}
-	span, _ := opentracing.StartSpanFromContext(ctx, "Doing request")
+	span, _ := opentracing.StartSpanFromContext(ctx, "Doing request to server two")
 	defer span.Finish()
 	tid := tracing.GetTraceID(span)
 
@@ -39,6 +39,9 @@ func DoRequest(ctx context.Context) (*http.Response, error) {
 	}
 
 	resp, err = http.DefaultClient.Do(req)
+	spanResponse := opentracing.StartSpan("Receiving response from server two", opentracing.ChildOf(span.Context()))
+	spanResponse.SetTag("status code", http.StatusOK)
+	defer spanResponse.Finish()
 	return resp, err
 }
 
