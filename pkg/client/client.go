@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"github.com/pocjaeger/pkg/tracing"
 	"github.com/uber/jaeger-client-go"
 	"io/ioutil"
 	"net/http"
@@ -28,26 +29,22 @@ func DoRequest(ctx context.Context) (Response, error) {
 	tids := fmt.Sprintf("%s", tid)
 
 	url := "http://localhost:8080/server-two"
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := tracing.NewTracedRequest("GET", url, span)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	req.Header.Set("TraceID", tids)
-	ext.SpanKindRPCClient.Set(span)
-	ext.HTTPUrl.Set(span, url)
-	ext.HTTPMethod.Set(span, "GET")
-	span.Tracer().Inject(
-		span.Context(),
-		opentracing.HTTPHeaders,
-		opentracing.HTTPHeadersCarrier(req.Header),
-	)
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return Response{}, err
 	}
 	defer resp.Body.Close()
+
+	spanCtxReturn, _ := opentracing.GlobalTracer().Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(resp.Header))
+	spanReturn := opentracing.GlobalTracer().StartSpan("server-one-returned-operation", ext.RPCServerOption(spanCtxReturn))
+	defer spanReturn.Finish()
+
 	var responseBody Response
 	body, err := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(body, &responseBody)

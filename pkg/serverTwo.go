@@ -33,6 +33,12 @@ func myTracingHandlerServerTwo(w http.ResponseWriter, r *http.Request){
 
 	w.WriteHeader(200)
 
+	span.Tracer().Inject(
+		span.Context(),
+		opentracing.HTTPHeaders,
+		opentracing.HTTPHeadersCarrier(w.Header()),
+	)
+
 	w.Header().Set("traceID", tid)
 	w.Header().Set("spanID", sid)
 
